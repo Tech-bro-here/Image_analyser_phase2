@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History — PosterMind</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #0a0a0f; --cream: #f5f0e8;
+            --electric: #3d5afe; --muted: #6b6b7a;
+            --border: rgba(0,0,0,0.08); --card-bg: #ffffff;
+        }
+        *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+        body { font-family:'DM Sans',sans-serif; background:var(--cream); color:var(--ink); min-height:100vh; }
+
+        nav {
+            position:sticky; top:0; z-index:100;
+            display:flex; align-items:center; justify-content:space-between;
+            padding:18px 48px;
+            background:rgba(245,240,232,0.9);
+            backdrop-filter:blur(12px);
+            border-bottom:1px solid var(--border);
+        }
+        .nav-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.3rem; letter-spacing:-0.03em; color:var(--ink); text-decoration:none; }
+        .nav-logo span { color:var(--electric); }
+        nav a.nav-link { font-size:0.875rem; color:var(--muted); text-decoration:none; font-weight:500; transition:color 0.2s; }
+        nav a.nav-link:hover { color:var(--ink); }
+
+        .container { max-width:960px; margin:0 auto; padding:56px 32px 80px; }
+
+        .page-header { margin-bottom:40px; }
+        .page-header h1 { font-family:'Syne',sans-serif; font-size:2.2rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:8px; }
+        .page-header p { color:var(--muted); font-size:0.95rem; }
+
+        .history-list { display:flex; flex-direction:column; gap:14px; }
+
+        .history-item {
+            background:var(--card-bg);
+            border:1px solid var(--border);
+            border-radius:18px; padding:28px;
+            transition:transform 0.2s, box-shadow 0.2s;
+        }
+        .history-item:hover {
+            transform:translateY(-2px);
+            box-shadow:0 10px 32px rgba(0,0,0,0.07);
+        }
+        .history-top { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:8px; }
+        .history-title { font-family:'Syne',sans-serif; font-size:1.05rem; font-weight:700; }
+        .history-date { font-size:0.75rem; color:var(--muted); white-space:nowrap; margin-top:3px; }
+        .history-req { font-size:0.88rem; color:var(--muted); margin-bottom:16px; line-height:1.5; }
+
+        .prompt-toggle-btn {
+            background:none; border:1px solid var(--border);
+            border-radius:8px; padding:6px 14px;
+            font-size:0.75rem; font-family:'Syne',sans-serif;
+            font-weight:700; cursor:pointer; color:var(--muted);
+            transition:all 0.2s;
+        }
+        .prompt-toggle-btn:hover { border-color:var(--electric); color:var(--electric); }
+
+        .prompt-preview {
+            display:none; margin-top:14px;
+            background:#f8f7f5; border:1px solid var(--border);
+            border-radius:12px; padding:16px 18px;
+            font-size:0.83rem; line-height:1.7; color:var(--ink);
+            position:relative;
+        }
+        .prompt-preview .copy-small {
+            position:absolute; top:10px; right:10px;
+            background:var(--ink); color:#f5f0e8;
+            border:none; border-radius:6px; padding:4px 10px;
+            font-size:0.7rem; font-weight:700;
+            font-family:'Syne',sans-serif;
+            cursor:pointer; transition:background 0.2s;
+        }
+        .prompt-preview .copy-small:hover { background:var(--electric); }
+
+        .empty {
+            text-align:center; padding:80px 20px;
+            color:var(--muted);
+        }
+        .empty .empty-icon { font-size:3.5rem; margin-bottom:20px; }
+        .empty p { font-size:1rem; margin-bottom:8px; }
+        .empty a { color:var(--electric); text-decoration:none; font-weight:600; }
+        .empty a:hover { text-decoration:underline; }
+
+        .new-btn {
+            display:inline-block;
+            background:var(--ink); color:#f5f0e8;
+            text-decoration:none; border-radius:12px;
+            padding:14px 28px;
+            font-family:'Syne',sans-serif;
+            font-size:0.88rem; font-weight:700;
+            margin-bottom:36px;
+            transition:background 0.2s, transform 0.15s;
+        }
+        .new-btn:hover { background:var(--electric); transform:translateY(-2px); }
+
+        footer { background:var(--ink); color:rgba(245,240,232,0.35); text-align:center; padding:20px; font-size:0.8rem; }
+
+        @media(max-width:640px){
+            nav { padding:14px 20px; }
+            .container { padding:40px 20px 60px; }
+            .history-top { flex-direction:column; gap:4px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="{% url 'home' %}" class="nav-logo">Poster<span>Mind</span></a>
+    <a href="{% url 'home' %}" class="nav-link">← Generate New</a>
+</nav>
+
+<div class="container">
+    <div class="page-header">
+        <h1>Generation History</h1>
+        <p>All your previously generated poster concepts are saved here.</p>
+    </div>
+
+    <a href="{% url 'home' %}" class="new-btn">✦ Generate New Concept</a>
+
+    {% if concepts %}
+    <div class="history-list">
+        {% for c in concepts %}
+        <div class="history-item">
+            <div class="history-top">
+                <div class="history-title">{{ c.poster_title }}</div>
+                <div class="history-date">{{ c.created_at|date:"M j, Y · g:i A" }}</div>
+            </div>
+            <div class="history-req">{{ c.user_request }}</div>
+            {% if c.ai_prompt %}
+            <button class="prompt-toggle-btn" onclick="togglePrompt(this)">Show Midjourney Prompt</button>
+            <div class="prompt-preview">
+                {{ c.ai_prompt }}
+                <button class="copy-small" onclick="copySmall(this)">Copy</button>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">
+        <div class="empty-icon">🪄</div>
+        <p>No concepts generated yet.</p>
+        <p><a href="{% url 'home' %}">Generate your first poster concept →</a></p>
+    </div>
+    {% endif %}
+</div>
+
+<footer>© 2026 PosterMind — AI Poster Concept Generator | Powered by Groq</footer>
+
+<script>
+    function togglePrompt(btn) {
+        const preview = btn.nextElementSibling;
+        const visible = preview.style.display === 'block';
+        preview.style.display = visible ? 'none' : 'block';
+        btn.textContent = visible ? 'Show Midjourney Prompt' : 'Hide Prompt';
+    }
+
+    function copySmall(btn) {
+        const text = btn.parentElement.textContent.replace(/Copy/g, '').trim();
+        navigator.clipboard.writeText(text).then(() => {
+            btn.textContent = '✓ Done';
+            setTimeout(() => btn.textContent = 'Copy', 2000);
+        });
+    }
+</script>
+
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History — PosterMind</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #0a0a0f; --cream: #f5f0e8;
+            --electric: #3d5afe; --muted: #6b6b7a;
+            --border: rgba(0,0,0,0.08); --card-bg: #ffffff;
+        }
+        *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+        body { font-family:'DM Sans',sans-serif; background:var(--cream); color:var(--ink); min-height:100vh; }
+
+        nav {
+            position:sticky; top:0; z-index:100;
+            display:flex; align-items:center; justify-content:space-between;
+            padding:18px 48px;
+            background:rgba(245,240,232,0.9);
+            backdrop-filter:blur(12px);
+            border-bottom:1px solid var(--border);
+        }
+        .nav-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.3rem; letter-spacing:-0.03em; color:var(--ink); text-decoration:none; }
+        .nav-logo span { color:var(--electric); }
+        nav a.nav-link { font-size:0.875rem; color:var(--muted); text-decoration:none; font-weight:500; transition:color 0.2s; }
+        nav a.nav-link:hover { color:var(--ink); }
+
+        .container { max-width:960px; margin:0 auto; padding:56px 32px 80px; }
+
+        .page-header { margin-bottom:40px; }
+        .page-header h1 { font-family:'Syne',sans-serif; font-size:2.2rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:8px; }
+        .page-header p { color:var(--muted); font-size:0.95rem; }
+
+        .history-list { display:flex; flex-direction:column; gap:14px; }
+
+        .history-item {
+            background:var(--card-bg);
+            border:1px solid var(--border);
+            border-radius:18px; padding:28px;
+            transition:transform 0.2s, box-shadow 0.2s;
+        }
+        .history-item:hover {
+            transform:translateY(-2px);
+            box-shadow:0 10px 32px rgba(0,0,0,0.07);
+        }
+        .history-top { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:8px; }
+        .history-title { font-family:'Syne',sans-serif; font-size:1.05rem; font-weight:700; }
+        .history-date { font-size:0.75rem; color:var(--muted); white-space:nowrap; margin-top:3px; }
+        .history-req { font-size:0.88rem; color:var(--muted); margin-bottom:16px; line-height:1.5; }
+
+        .prompt-toggle-btn {
+            background:none; border:1px solid var(--border);
+            border-radius:8px; padding:6px 14px;
+            font-size:0.75rem; font-family:'Syne',sans-serif;
+            font-weight:700; cursor:pointer; color:var(--muted);
+            transition:all 0.2s;
+        }
+        .prompt-toggle-btn:hover { border-color:var(--electric); color:var(--electric); }
+
+        .prompt-preview {
+            display:none; margin-top:14px;
+            background:#f8f7f5; border:1px solid var(--border);
+            border-radius:12px; padding:16px 18px;
+            font-size:0.83rem; line-height:1.7; color:var(--ink);
+            position:relative;
+        }
+        .prompt-preview .copy-small {
+            position:absolute; top:10px; right:10px;
+            background:var(--ink); color:#f5f0e8;
+            border:none; border-radius:6px; padding:4px 10px;
+            font-size:0.7rem; font-weight:700;
+            font-family:'Syne',sans-serif;
+            cursor:pointer; transition:background 0.2s;
+        }
+        .prompt-preview .copy-small:hover { background:var(--electric); }
+
+        .empty {
+            text-align:center; padding:80px 20px;
+            color:var(--muted);
+        }
+        .empty .empty-icon { font-size:3.5rem; margin-bottom:20px; }
+        .empty p { font-size:1rem; margin-bottom:8px; }
+        .empty a { color:var(--electric); text-decoration:none; font-weight:600; }
+        .empty a:hover { text-decoration:underline; }
+
+        .new-btn {
+            display:inline-block;
+            background:var(--ink); color:#f5f0e8;
+            text-decoration:none; border-radius:12px;
+            padding:14px 28px;
+            font-family:'Syne',sans-serif;
+            font-size:0.88rem; font-weight:700;
+            margin-bottom:36px;
+            transition:background 0.2s, transform 0.15s;
+        }
+        .new-btn:hover { background:var(--electric); transform:translateY(-2px); }
+
+        footer { background:var(--ink); color:rgba(245,240,232,0.35); text-align:center; padding:20px; font-size:0.8rem; }
+
+        @media(max-width:640px){
+            nav { padding:14px 20px; }
+            .container { padding:40px 20px 60px; }
+            .history-top { flex-direction:column; gap:4px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="{% url 'home' %}" class="nav-logo">Poster<span>Mind</span></a>
+    <a href="{% url 'home' %}" class="nav-link">← Generate New</a>
+</nav>
+
+<div class="container">
+    <div class="page-header">
+        <h1>Generation History</h1>
+        <p>All your previously generated poster concepts are saved here.</p>
+    </div>
+
+    <a href="{% url 'home' %}" class="new-btn">✦ Generate New Concept</a>
+
+    {% if concepts %}
+    <div class="history-list">
+        {% for c in concepts %}
+        <div class="history-item">
+            <div class="history-top">
+                <div class="history-title">{{ c.poster_title }}</div>
+                <div class="history-date">{{ c.created_at|date:"M j, Y · g:i A" }}</div>
+            </div>
+            <div class="history-req">{{ c.user_request }}</div>
+            {% if c.ai_prompt %}
+            <button class="prompt-toggle-btn" onclick="togglePrompt(this)">Show Midjourney Prompt</button>
+            <div class="prompt-preview">
+                {{ c.ai_prompt }}
+                <button class="copy-small" onclick="copySmall(this)">Copy</button>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">
+        <div class="empty-icon">🪄</div>
+        <p>No concepts generated yet.</p>
+        <p><a href="{% url 'home' %}">Generate your first poster concept →</a></p>
+    </div>
+    {% endif %}
+</div>
+
+<footer>© 2026 PosterMind — AI Poster Concept Generator | Powered by Groq</footer>
+
+<script>
+    function togglePrompt(btn) {
+        const preview = btn.nextElementSibling;
+        const visible = preview.style.display === 'block';
+        preview.style.display = visible ? 'none' : 'block';
+        btn.textContent = visible ? 'Show Midjourney Prompt' : 'Hide Prompt';
+    }
+
+    function copySmall(btn) {
+        const text = btn.parentElement.textContent.replace(/Copy/g, '').trim();
+        navigator.clipboard.writeText(text).then(() => {
+            btn.textContent = '✓ Done';
+            setTimeout(() => btn.textContent = 'Copy', 2000);
+        });
+    }
+</script>
+
+</body>
+</html>
